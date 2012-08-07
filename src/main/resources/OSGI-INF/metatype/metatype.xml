@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metatype:MetaData xmlns:metatype="http://www.osgi.org/xmlns/metatype/v1.0.0">
+	<OCD description="PHIN VADS Plugin" name="PHIN VADS Plugin" id="edu.mayo.cts2.framework.plugin.service.phinvads">
+		<AD name="NamespaceService URL" id="namespaceServiceUrl" required="true" type="String" default="http://informatics.mayo.edu/cts2/services/bioportal-rdf/"  />
+	</OCD>
+	<Designate pid="edu.mayo.cts2.framework.plugin.service.phinvads">
+        <Object ocdref="edu.mayo.cts2.framework.plugin.service.phinvads"/>
+    </Designate>
+	
+</metatype:MetaData>
