@@ -63,9 +63,10 @@ class ValueSetTransform {
     val synopsis: EntitySynopsis = new EntitySynopsis()
     synopsis.setDesignation(entry.getCdcPreferredDesignation())
     synopsis.setName(entry.getConceptCode())
-    val cs = phinVadsDao.codeSystemMaps.codeSystemByUri(entry.getCodeSystemOid())
-    synopsis.setNamespace(cs.getCodeSystemCode())
+    val csId = phinVadsDao.codeSystemIdMaps.codeSystemIdByUri(entry.getCodeSystemOid())
+    synopsis.setNamespace(csId.name)
     synopsis.setUri("uri:urn:" + entry.getId);
+    synopsis.setHref(urlConstructor.createEntityUrl(csId.name, csId.codeSystemVersionName, entry.getConceptCode))
 
     synopsis
   }: EntitySynopsis

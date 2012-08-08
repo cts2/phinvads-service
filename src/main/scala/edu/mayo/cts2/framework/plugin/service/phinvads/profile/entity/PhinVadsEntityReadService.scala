@@ -33,6 +33,7 @@ import edu.mayo.cts2.framework.model.core.Property
 import edu.mayo.cts2.framework.model.core.StatementTarget
 import edu.mayo.cts2.framework.model.core.PredicateReference
 import edu.mayo.cts2.framework.plugin.service.phinvads.dao.PhinVadsDao
+import edu.mayo.cts2.framework.plugin.service.phinvads.transform.EntityTransform
 
 @Component
 class PhinVadsEntityReadService extends AbstractService
@@ -43,6 +44,9 @@ class PhinVadsEntityReadService extends AbstractService
   
   @Resource
   var phinVadsDao: PhinVadsDao = _
+  
+  @Resource
+  var entityTransform: EntityTransform = _
 
   def readEntityDescriptions(p1: EntityNameOrURI, p2: SortCriteria, p3: ResolvedReadContext, p4: Page): DirectoryResult[EntityListEntry] = throw new RuntimeException()
 
@@ -56,9 +60,13 @@ class PhinVadsEntityReadService extends AbstractService
 
   def read(id: EntityDescriptionReadId, context: ResolvedReadContext = null): EntityDescription = {
 
-    //phinVadsDao.vocabService.getCodeSystemConceptByOidAndCode(x$1, x$2)
+    val csvName = id.getCodeSystemVersion().getName()
+    val entityName = id.getEntityName().getName()
+
+    val oid = phinVadsDao.codeSystemIdMaps.codeSystemIdByVersionName.getOrElse(csvName, return null).oid
     
-    null
+    entityTransform.transformPhinVadsCodeSystemConceptToEntity(
+        phinVadsDao.vocabService.getCodeSystemConceptByOidAndCode(oid, entityName).getCodeSystemConcept())
   }
 
   def exists(p1: EntityDescriptionReadId, p2: ResolvedReadContext): Boolean = throw new RuntimeException()

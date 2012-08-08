@@ -35,9 +35,17 @@ class PhinVadsDao extends InitializingBean {
 
   var valueSetNameToOidMap: Map[String, String] = _
 
+  var codeSystemNameToOidMap: Map[String, String] = _
+
+  var codeSystemIdMaps: CodeSystemIdMaps = _
+
   var valueSetMaps: ValueSetMaps = _
 
-  var codeSystemMaps: CodeSystemMaps = _
+  class CodeSystemIdMaps(
+    val codeSystemIdByName: Map[String, CodeSystemId] = Map(),
+    val codeSystemIdByUri: Map[String, CodeSystemId] = Map(),
+    val codeSystemIdByVersionName: Map[String, CodeSystemId] = Map(),
+    val codeSystemIdByNameAndVersion: Map[(String, String), CodeSystemId] = Map())
 
   class CodeSystemMaps(
     val codeSystemByName: Map[String, CodeSystem] = Map(),
@@ -59,24 +67,20 @@ class PhinVadsDao extends InitializingBean {
       map.codeSystemByUri ++ Map(cs.getOid() -> cs))
   }: CodeSystemMaps
 
-  def cacheValueSetMaps() = {
+  private def cacheValueSetMaps(valueSets:Seq[ValueSet]) = {
     valueSets.
       foldLeft(new ValueSetMaps())(mapValueSetIds)
   }: ValueSetMaps
-
-  def cacheCodeSystemMaps() = {
-    codeSystems.
-      foldLeft(new CodeSystemMaps())(mapCodeSystemIds)
-  }: CodeSystemMaps
 
   def afterPropertiesSet() {
     vocabService = initPhinVadsClient()
     valueSets = cacheValueSets()
     valueSetVersions = cacheValueSetVersions()
-    valueSetNameToOidMap = cacheValueSetOids()
+    valueSetNameToOidMap = cacheValueSetOids(valueSets)
+    valueSetMaps = cacheValueSetMaps(valueSets)
+    
     codeSystems = vocabService.getAllCodeSystems().getCodeSystems()
-    valueSetMaps = cacheValueSetMaps()
-    codeSystemMaps = cacheCodeSystemMaps()
+    codeSystemIdMaps = cacheCodeSystemIdMaps(codeSystems)
   }
 
   private def initPhinVadsClient() = {
@@ -119,10 +123,34 @@ class PhinVadsDao extends InitializingBean {
     vocabService.getAllValueSetVersions().getValueSetVersions()
   }
 
-  private def cacheValueSetOids() = {
-    vocabService.getAllValueSets().getValueSets().foldLeft(Map[String, String]())(
+  private def cacheValueSetOids(valueSets:Seq[ValueSet]) = {
+    valueSets.foldLeft(Map[String, String]())(
       (map, valueSet) => {
         map ++ Map(valueSet.getCode() -> valueSet.getOid())
       })
+  }
+
+  private def cacheCodeSystemIdMaps(codeSystems:Seq[CodeSystem]) = {
+    codeSystems.foldLeft(new CodeSystemIdMaps())(
+      (map, codeSystem) => {
+        val versionName = getCodeSystemVersionName(codeSystem)
+
+        val csId = new CodeSystemId(
+            codeSystem.getCodeSystemCode(),
+            versionName,
+            codeSystem.getVersion,
+            codeSystem.getOid)
+        new CodeSystemIdMaps(
+          map.codeSystemIdByName ++ Map(codeSystem.getCodeSystemCode() -> csId),
+          map.codeSystemIdByUri ++ Map(codeSystem.getOid() -> csId),
+          map.codeSystemIdByVersionName ++ Map(versionName -> csId),
+          map.codeSystemIdByNameAndVersion ++ Map((codeSystem.getCodeSystemCode(), codeSystem.getVersion()) -> csId))
+      })
+  }
+
+  def getCodeSystemVersionName(codeSystem: CodeSystem): String = {
+    val versionName =  codeSystem.getCodeSystemCode() + "-" + codeSystem.getVersion()
+    
+    versionName
   }
 }

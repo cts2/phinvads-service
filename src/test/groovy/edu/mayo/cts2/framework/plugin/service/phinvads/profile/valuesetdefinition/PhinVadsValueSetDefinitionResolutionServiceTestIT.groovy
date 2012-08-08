@@ -60,6 +60,19 @@ class PhinVadsValueSetDefinitionResolutionServiceTestIT extends AbstractTestBase
 	}
 	
 	@Test
+	void TestGetSummariesEntrieHaveHref() {
+		def id = new ValueSetDefinitionReadId("1", ModelUtils.nameOrUriFromName("PHVS_AbnormalFlag_HL7_2x"))
+		
+		def entries = service.resolveDefinition(id, null, null, null , null, null, new Page()).entries
+		
+		assertTrue entries.size() > 1
+		
+		entries.each {
+			assertNotNull it.href
+		}
+	}
+	
+	@Test
 	void TestGetSummariesHeadingNotNull() {
 		def id = new ValueSetDefinitionReadId("1", ModelUtils.nameOrUriFromName("PHVS_AbnormalFlag_HL7_2x"))
 		
