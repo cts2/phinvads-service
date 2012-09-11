@@ -1,12 +1,8 @@
 package edu.mayo.cts2.framework.plugin.service.phinvads.profile.valuesetdefinition
 
-import java.util.Set
-
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
-
 import org.springframework.stereotype.Component
-
 import edu.mayo.cts2.framework.model.command.Page
 import edu.mayo.cts2.framework.model.command.ResolvedReadContext
 import edu.mayo.cts2.framework.model.core._
@@ -23,6 +19,9 @@ import edu.mayo.cts2.framework.service.profile.valuesetdefinition.ValueSetDefini
 import edu.mayo.cts2.framework.service.profile.valuesetdefinition.name.ValueSetDefinitionReadId
 import gov.cdc.vocab.service.bean.ValueSetConcept
 import javax.annotation.Resource
+import gov.cdc.vocab.service.bean.ValueSetVersion
+import gov.cdc.vocab.service.bean.ValueSet
+import gov.cdc.vocab.service.dto.input.CodeSystemSearchCriteriaDto
 
 @Component
 class PhinVadsValueSetDefinitionResolutionService extends AbstractService with ValueSetDefinitionResolutionService {
@@ -33,17 +32,17 @@ class PhinVadsValueSetDefinitionResolutionService extends AbstractService with V
   @Resource
   var valueSetTransform: ValueSetTransform = _
 
-  def getSupportedMatchAlgorithms: Set[_ <: MatchAlgorithmReference] = null
+  def getSupportedMatchAlgorithms: java.util.Set[_ <: MatchAlgorithmReference] = null
 
-  def getSupportedSearchReferences: Set[_ <: PropertyReference] = null
+  def getSupportedSearchReferences: java.util.Set[_ <: PropertyReference] = null
 
-  def getSupportedSortReferences: Set[_ <: PropertyReference] = null
+  def getSupportedSortReferences: java.util.Set[_ <: PropertyReference] = null
 
-  def getKnownProperties: Set[PredicateReference] = null
+  def getKnownProperties: java.util.Set[PredicateReference] = null
 
   def resolveDefinition(
     id: ValueSetDefinitionReadId,
-    codeSystemVersions: Set[NameOrURI],
+    codeSystemVersions: java.util.Set[NameOrURI],
     codeSystemVersionTag: NameOrURI,
     query: ResolvedValueSetResolutionEntityQuery,
     sort: SortCriteria,
@@ -52,7 +51,9 @@ class PhinVadsValueSetDefinitionResolutionService extends AbstractService with V
 
     val valueSetName = id.getValueSet().getName()
 
-    val valueSetOid = phinVadsDao.getValueSetOid(valueSetName)
+    val valueSet = phinVadsDao.valueSetMaps.valueSetByName(valueSetName);
+
+    val valueSetOid = valueSet.getOid
 
     val valueSetVersion =
       phinVadsDao.vocabService.getValueSetVersionByValueSetOidAndVersionNumber(valueSetOid, null)
@@ -60,26 +61,53 @@ class PhinVadsValueSetDefinitionResolutionService extends AbstractService with V
     val versionId = valueSetVersion.getValueSetVersion().getId()
 
     val valueSetConcepts = phinVadsDao.vocabService.
-      getValueSetConceptsByValueSetVersionId(versionId, 1, 50).
+      getValueSetConceptsByValueSetVersionId(versionId, page.getStart + 1, page.getEnd + 1).
       getValueSetConcepts().asScala
 
     val synopsis: Seq[EntitySynopsis] = valueSetConcepts.map(valueSetTransform.transformValueSetConcept)
 
-    new ResolvedValueSetResult(buildHeader(), synopsis, true)
+    new ResolvedValueSetResult(buildHeader(valueSet, valueSetVersion.getValueSetVersion, valueSetConcepts), synopsis, true)
   }
 
-  private def buildHeader(): ResolvedValueSetHeader = {
+  private def buildHeader(valueSet:ValueSet, valueSetVersion:ValueSetVersion, concepts:Seq[ValueSetConcept]): ResolvedValueSetHeader = {
+    
+    val csvRefs = concepts.foldLeft(Set[CodeSystemVersionReference]())( (x,y) => x ++ Set(valueSetConceptToCsvReference(y)) )
+    
     val header = new ResolvedValueSetHeader()
-
+    csvRefs.foreach( header.addResolvedUsingCodeSystem(_))
+ 
     val valueDefSetRef = new ValueSetDefinitionReference()
-    valueDefSetRef.setValueSet(new ValueSetReference("unknown"))
-    valueDefSetRef.setValueSetDefinition(new NameAndMeaningReference("unknown"))
+    val vsr = new ValueSetReference(valueSet.getCode);
+    vsr.setUri("urn:oid:" + valueSet.getOid)
+    valueDefSetRef.setValueSet(vsr)
+    
+    val vsdr = new NameAndMeaningReference(valueSet.getCode + "-v" +valueSetVersion.getVersionNumber)
+    valueDefSetRef.setValueSetDefinition(vsdr)
     header.setResolutionOf(valueDefSetRef)
 
     header
   }
+  
+  private def valueSetConceptToCsvReference(concept:ValueSetConcept) = {
+    val ref = new CodeSystemVersionReference()
+    val csOid = concept.getCodeSystemOid
+    
+    val csId = phinVadsDao.codeSystemIdMaps.codeSystemIdByUri(csOid)
+    val csName = csId.name
+    val csvName = csId.codeSystemVersionName
+    
+    val csr = new CodeSystemReference(csName)
+    csr.setUri("urn:oid:" + csOid)
+    
+    val csvr = new NameAndMeaningReference(csvName)
+    ref.setCodeSystem(csr)
+    ref.setVersion(csvr)
 
-  def resolveDefinitionAsEntityDirectory(p1: ValueSetDefinitionReadId, p2: Set[NameOrURI], p3: NameOrURI, p4: ResolvedValueSetResolutionEntityQuery, p5: SortCriteria, p6: ResolvedReadContext, p7: Page): ResolvedValueSetResult[EntityDirectoryEntry] = null
+    ref
+    
+  }:CodeSystemVersionReference
 
-  def resolveDefinitionAsCompleteSet(p1: ValueSetDefinitionReadId, p2: Set[NameOrURI], p3: NameOrURI, p4: ResolvedReadContext): ResolvedValueSet = null
+  def resolveDefinitionAsEntityDirectory(p1: ValueSetDefinitionReadId, p2: java.util.Set[NameOrURI], p3: NameOrURI, p4: ResolvedValueSetResolutionEntityQuery, p5: SortCriteria, p6: ResolvedReadContext, p7: Page): ResolvedValueSetResult[EntityDirectoryEntry] = null
+
+  def resolveDefinitionAsCompleteSet(p1: ValueSetDefinitionReadId, p2: java.util.Set[NameOrURI], p3: NameOrURI, p4: ResolvedReadContext): ResolvedValueSet = null
 }

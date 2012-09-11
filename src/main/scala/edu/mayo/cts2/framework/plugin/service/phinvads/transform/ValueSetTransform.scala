@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component
 import gov.cdc.vocab.service.bean.ValueSetConcept
 import edu.mayo.cts2.framework.model.core.EntitySynopsis
 import edu.mayo.cts2.framework.plugin.service.phinvads.dao.PhinVadsDao
+import edu.mayo.cts2.framework.plugin.service.phinvads.namespace.NamespaceResolutionService
 
 @Component
 class ValueSetTransform {
@@ -22,6 +23,9 @@ class ValueSetTransform {
 
   @Resource
   var phinVadsDao: PhinVadsDao = _
+  
+  @Resource
+  var namespaceResolutionService: NamespaceResolutionService = _
 
   def transformPhinVadsValueSetToSummary = (phinvadsvs: ValueSet) => {
     transformValueSetToSummary(transformPhinVadsValueSetToEntry(phinvadsvs))

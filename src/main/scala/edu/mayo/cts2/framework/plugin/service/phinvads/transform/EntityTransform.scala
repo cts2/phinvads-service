@@ -23,12 +23,16 @@ import edu.mayo.cts2.framework.model.core.NameAndMeaningReference
 import edu.mayo.cts2.framework.model.core.CodeSystemReference
 import gov.cdc.vocab.service.bean.CodeSystem
 import edu.mayo.cts2.framework.plugin.service.phinvads.dao.CodeSystemId
+import edu.mayo.cts2.framework.plugin.service.phinvads.namespace.NamespaceResolutionService
 
 @Component
 class EntityTransform {
 
   @Resource
   var urlConstructor: UrlConstructor = _
+  
+  @Resource
+  var namespaceResolutionService: NamespaceResolutionService = _
 
   @Resource
   var phinVadsDao: PhinVadsDao = _
@@ -41,7 +45,12 @@ class EntityTransform {
     val cs = phinVadsDao.codeSystemIdMaps.codeSystemIdByUri(phinvadcsc.getCodeSystemOid())
     name.setNamespace(cs.name)
 
-    entity.setAbout("uri:urn:" + phinvadcsc.getId())
+    val nsUri = namespaceResolutionService.prefixToUri(StringUtils.removeStart(cs.name, "PH_"))
+    if(nsUri != null){
+      entity.setAbout(nsUri + phinvadcsc.getConceptCode )
+    } else {
+      entity.setAbout("uri:urn:" + phinvadcsc.getId())
+    }
 
     entity.setEntityID(name)
 
